@@ -30,21 +30,25 @@
 """ACI Toolkit Test module
 """
 from acitoolkit.acitoolkit import *
-from acitoolkit.aciphysobject import *
-from acitoolkit.acibaseobject import *
+# from acitoolkit.aciphysobject import *
+# from acitoolkit.acibaseobject import *
 import unittest
 import string
 import random
+import sys
+import time
+import json
 
 try:
     from credentials import *
 except ImportError:
+    print
+    print 'To run live tests, please create a credentials.py file with the following variables filled in:'
+    print """
     URL = ''
     LOGIN = ''
     PASSWORD = ''
-import sys
-import time
-import json
+    """
 
 MAX_RANDOM_STRING_SIZE = 20
 
@@ -656,6 +660,135 @@ class TestBridgeDomain(unittest.TestCase):
         bridge_domains = [bd1, bd2, bd3]
         self.assertTrue(isinstance(BridgeDomain.get_table(bridge_domains)[0], Table))
 
+    def test_unknown_mac_unicast_default(self):
+        """
+        Test default unknown mac unicast
+        """
+        tenant, bd = self.create_bd()
+        self.assertTrue(bd.get_unknown_mac_unicast(), 'proxy')
+
+    def test_unknown_mac_unicast_flood(self):
+        """
+        Test changing unknown mac unicast to flood
+        """
+        tenant, bd = self.create_bd()
+        bd.set_unknown_mac_unicast('flood')
+        self.assertTrue(bd.get_unknown_mac_unicast(), 'flood')
+        
+    def test_unknown_mac_unicast_invalid(self):
+        """
+        Test an invalid unknown mac unicast 
+        """
+        tenant, bd = self.create_bd()
+        self.assertRaises(ValueError,
+                          bd.set_unknown_mac_unicast,"invalid")
+
+    def test_unknown_mac_unicast_change(self):
+        """
+        Test changing unknown mac unicast multiple times
+        """
+        tenant, bd = self.create_bd()
+        bd.set_unknown_mac_unicast('proxy')
+        bd.set_unknown_mac_unicast('flood')
+        self.assertTrue(bd.get_unknown_mac_unicast(), 'flood')
+
+    def test_unknown_multicast_default(self):
+        """
+        Test default unknown multicast
+        """
+        tenant, bd = self.create_bd()
+        self.assertTrue(bd.get_unknown_multicast(), 'flood')
+
+    def test_unknown_multicast_opt_flood(self):
+        """
+        Test changing unknown multicast to optimized flood
+        """
+        tenant, bd = self.create_bd()
+        bd.set_unknown_multicast('opt-flood')
+        self.assertTrue(bd.get_unknown_multicast(), 'opt-flood')
+        
+    def test_unknown_multicast_invalid(self):
+        """
+        Test an invalid unknown multicast 
+        """
+        tenant, bd = self.create_bd()
+        self.assertRaises(ValueError,
+                          bd.set_unknown_multicast,"invalid")
+        
+    def test_unknown_multicast_change(self):
+        """
+        Test changing unknown multicast multiple times
+        """
+        tenant, bd = self.create_bd()
+        bd.set_unknown_multicast('opt-flood')
+        bd.set_unknown_multicast('flood')
+        self.assertTrue(bd.get_unknown_mac_unicast(), 'flood')
+
+    def test_arp_flood_default(self):
+        """
+        Test default arp flood
+        """
+        tenant, bd = self.create_bd()
+        self.assertFalse(bd.is_arp_flood())
+
+    def test_arp_flood_switch(self):
+        """
+        Test switching arp flood value
+        """
+        tenant, bd = self.create_bd()
+        bd.set_arp_flood("yes")
+        self.assertTrue(bd.is_arp_flood())
+
+    def test_arp_flood_invalid(self):
+        """
+        Test an invalid arp flood
+        """
+        tenant, bd = self.create_bd()
+        self.assertRaises(ValueError,
+                          bd.set_arp_flood,'invalid')
+        
+    def test_arp_flood_change(self):
+        """
+        Test changing arp flood multiple times
+        """
+        tenant, bd = self.create_bd()
+        bd.set_arp_flood('yes')
+        bd.set_arp_flood('no')
+        self.assertFalse(bd.is_arp_flood())
+
+    def test_unicast_route_default(self):
+        """
+        Test default unicast route
+        """
+        tenant, bd = self.create_bd()
+        self.assertTrue(bd.is_unicast_route())
+
+    def test_unicast_route_switch(self):
+        """
+        Test switching unicast route value
+        """
+        tenant, bd = self.create_bd()
+        bd.set_unicast_route('no')
+        self.assertFalse(bd.is_unicast_route())
+
+    def test_unicast_route_invalid(self):
+        """
+        Test an invalid unicast route
+        """
+        tenant, bd = self.create_bd()
+        self.assertRaises(ValueError,
+                          bd.set_unicast_route,'invalid')
+        
+    def test_unicast_route_change(self):
+        """
+        Test changing unicast route multiple times
+        """
+        tenant, bd = self.create_bd()
+        bd.set_unicast_route('no')
+        bd.set_unicast_route('yes')
+        self.assertTrue(bd.is_unicast_route())
+        
+    
 
 class TestL2Interface(unittest.TestCase):
     """
@@ -1386,6 +1519,7 @@ class TestEndpoint(unittest.TestCase):
         data = tenant.get_json()
         self.verify_json(data, True)
 
+
 class TestPhysDomain(unittest.TestCase):
     """
     Class for testing Phys Domain
@@ -1467,6 +1601,7 @@ class TestJson(unittest.TestCase):
 
         self.assertTrue(output == expected_json,
                         'Did not see expected JSON returned')
+
 
 class TestEPGDomain(unittest.TestCase):
     """
@@ -1853,8 +1988,12 @@ class TestLiveSubscription(TestLiveAPIC):
     """
     def test_create_class_subscription(self):
         session = self.login_to_apic()
+        tenants = Tenant.get(session)
         Tenant.subscribe(session)
-        self.assertFalse(Tenant.has_events(session))
+        if len(tenants):
+            self.assertTrue(Tenant.has_events(session))
+        else:
+            self.assertFalse(Tenant.has_events(session))
         Tenant.unsubscribe(session)
 
     def test_delete_unsubscribed_class_subscription(self):
@@ -1864,9 +2003,13 @@ class TestLiveSubscription(TestLiveAPIC):
 
     def test_double_class_subscription(self):
         session = self.login_to_apic()
+        tenants = Tenant.get(session)
         Tenant.subscribe(session)
         Tenant.subscribe(session)
-        self.assertFalse(Tenant.has_events(session))
+        if len(tenants):
+            self.assertTrue(Tenant.has_events(session))
+        else:
+            self.assertFalse(Tenant.has_events(session))
         Tenant.unsubscribe(session)
 
     def test_get_event_no_subcribe(self):
@@ -2093,7 +2236,6 @@ class TestLiveEPGDomain(TestLiveAPIC):
             self.assertTrue(isinstance(epg_domain.name, str))
 
 
-
 class TestLiveEndpoint(TestLiveAPIC):
     def test_get_bad_session(self):
         bad_session = 'BAD SESSION'
@@ -2200,7 +2342,9 @@ class TestApic(TestLiveAPIC):
                     ' "children": [{"fvAp": {"attributes": {"name": "app1"}, '
                     '"children": [{"fvAEPg": {"attributes": {"name": "epg1"}, '
                     '"children": [{"fvRsBd": {"attributes": {"tnFvBDName": '
-                    '"bd1"}}}]}}]}}, {"fvBD": {"attributes": {"name": "bd1"},'
+                    '"bd1"}}}]}}]}}, {"fvBD": {"attributes": {"arpFlood": "no", '
+                    '"unkMacUcastAct": "proxy", "name": "bd1", '
+                    '"unicastRoute": "yes", "unkMcastAct": "flood"},'
                     ' "children": []}}]}}')
         actual = json.dumps(tenant.get_json())
         self.assertTrue(actual == expected)
@@ -2392,6 +2536,7 @@ class TestApic(TestLiveAPIC):
         # Cleanup
         self.base_test_teardown(session, tenant)
 
+
 class TestLivePhysDomain(TestLiveAPIC):
     """
     Class to test live phys domain
@@ -2454,6 +2599,7 @@ class TestLivePhysDomain(TestLiveAPIC):
         # Verify that new phys domain is deleted
         names = self.get_all_phys_domain_names()
         self.assertTrue(new_phys_domain.name not in names)
+
 
 class TestLiveVmmDomain(TestLiveAPIC):
     def test_get(self):

@@ -25,8 +25,12 @@
 #    under the License.                                                        #
 #                                                                              #
 ################################################################################
+"""
+A table class that allows data and headers to be added to the class and then a nicely formatted table
+retrieved from the class.
+
+"""
 from tabulate import tabulate
-import copy
 
 
 class Table(object):
@@ -73,6 +77,7 @@ class Table(object):
         :param table_orientation: Orientation - 'Horizontal' or 'Vertical'. Default is 'Horizontal'
         """
         # TODO: make table_orientation dynamic, i.e. determined based on the number of rows vs. number of columns.
+        # TODO: make titles conform to tablefmt
         self.data = data
         self.headers = headers
         self.tablefmt = tablefmt
@@ -129,9 +134,9 @@ class Table(object):
         if table_orientation == 'vertical':
 
             if self.headers:
-                assert(len(self.headers) == len(self.data[0]),
-                       'Headers and Data have different lenghts - {0} and {1} respectively'
-                       .format(len(self.headers), len(self.data[0])))
+                assert len(self.data[0]) == len(self.headers),\
+                    'Headers and Data have different lenghts - {0} and {1} respectively'\
+                    .format(len(self.headers), len(self.data[0]))
 
             # rotate table
             table_data = []
@@ -186,18 +191,18 @@ class Table(object):
         """
         return '\"'+self.title+'\"'
 
-    def multi_column(self, table_text):
-        """
-
-        :return: new, multi-column table text
-        """
-        result = ''
-        rows = table_text.split('\n')
-        for index in range(len(rows)/2):
-            result += rows[index]
-            if (len(rows)/2 + index) < len(rows):
-                result += rows[len(rows)/2 + index] + '\n'
-            else:
-                result += '\n'
-
-        return result
+    # def multi_column(self, table_text):
+    #     """
+    #
+    #     :return: new, multi-column table text
+    #     """
+    #     result = ''
+    #     rows = table_text.split('\n')
+    #     for index in range(len(rows)/2):
+    #         result += rows[index]
+    #         if (len(rows)/2 + index) < len(rows):
+    #             result += rows[len(rows)/2 + index] + '\n'
+    #         else:
+    #             result += '\n'
+    #
+    #     return result
